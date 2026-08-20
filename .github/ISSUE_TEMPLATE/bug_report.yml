@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in the pipeline behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: `manifest.json → data_quality` in the run directory
+        usually explains low calibration coverage or low ball visibility.
+        Those are documented limitations, not bugs — see docs/LIMITATIONS.md.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The exact command, including mode and any `--set` overrides.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Run manifest
+      description: >
+        Paste `manifest.json` from the run directory, or at minimum its
+        `models`, `stages` and `data_quality` blocks. This carries the config
+        fingerprint and model hashes, without which a result cannot be traced.
+      render: json
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `visionpitch --version`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, GPU (or CPU-only), ffmpeg version.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checkpoints
+    attributes:
+      label: Checkpoints
+      options:
+        - label: I ran `python scripts/download_models.py` and it completed
+        - label: I am using the promoted `ball_gsrtrain_v2c` checkpoint
+        - label: I am using the public rollback ball checkpoint

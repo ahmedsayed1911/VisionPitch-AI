@@ -1,0 +1,31 @@
+# Balanced - the default. Every frame processed, both detectors active,
+# appearance-assisted tracking with camera motion compensation.
+#
+# This is the mode the reported Phase 1 evaluation numbers are measured in
+# unless the report states otherwise.
+
+runtime:
+  half_precision: true
+  batch_size: 16
+
+ingestion:
+  frame_stride: 1
+
+detection:
+  imgsz: 1280
+
+ball_detection:
+  enabled: true
+  imgsz: 640
+  tiled_every_n_frames: 1
+
+tracking:
+  tracker: botsort
+  reid_enabled: true
+  gmc_enabled: true
+
+team_classification:
+  method: color
+
+calibration:
+  calibrate_every_n_frames: 1

@@ -1,0 +1,171 @@
+# VisionPitch AI - base configuration.
+#
+# This file holds settings shared by every analysis mode. Mode overlays in
+# configs/modes/ are merged on top of it; CLI --set flags are merged last.
+# Field documentation lives in src/visionpitch/common/config.py.
+
+mode: balanced
+
+runtime:
+  device: auto
+  half_precision: true
+  batch_size: 16
+  num_workers: 4
+  seed: 1234
+
+ingestion:
+  frame_stride: 1
+  start_time_s: null
+  end_time_s: null
+  max_frames: null
+  checkpoint_every: 500
+  max_corrupt_frame_ratio: 0.02
+
+detection:
+  backend: football
+  model_path: models/yolo-football-player-detection.pt
+  # Matches the checkpoint's fine-tuning resolution. Do not raise it: see the
+  # note in src/visionpitch/common/config.py and docs/EVALUATION.md.
+  imgsz: 1280
+  augment: false
+  conf_threshold: 0.25
+  iou_threshold: 0.5
+  max_detections: 60
+  small_object_area_px: 1024.0
+  # The ball floor is deliberately far lower than the person floor: ball recall
+  # matters more than ball precision here, because the temporal trajectory
+  # estimator downstream can reject false positives but cannot invent misses.
+  class_conf_overrides:
+    ball: 0.10
+    goalkeeper: 0.30
+    referee: 0.30
+
+ball_detection:
+  enabled: true
+  # Phase 2E. Selected on canonical SN-GSR VALID (SNGS-021..028, fingerprint
+  # 9448640d2e7ae6a8) by a detector x confidence x resolution sweep scored on
+  # downstream possession rather than detector AP, then validated end to end on
+  # the held-out SN-BAS broadcast. Beats the previous checkpoint on 8/8 VALID
+  # sequences for determinability, recall@25, possession team F1 and prediction
+  # coverage. See docs/PHASE2E_BALL_OPERATING_POINT.md.
+  #
+  # It is also the only ball checkpoint on disk with clean provenance: every
+  # other one was fine-tuned on SN-GSR *test* frames, which burns the test split.
+  # Rollback: configs/default.pre_phase2e_ball.yaml plus the two mode backups.
+  model_path: models/finetune/ball_gsrtrain_v2c/weights/best.pt
+  # imgsz lives in the mode overlays, which outrank this file.
+  imgsz: 1280
+  conf_threshold: 0.08
+  roi_size_px: 640
+  tiled_fallback: true
+  tile_rows: 2
+  tile_cols: 3
+  tile_overlap: 0.2
+  # 1, not 3 - see config.py. Measured +6.8pp direct ball observation.
+  tiled_every_n_frames: 1
+
+tracking:
+  tracker: botsort
+  track_high_threshold: 0.5
+  track_low_threshold: 0.1
+  new_track_threshold: 0.6
+  track_buffer: 60
+  match_threshold: 0.8
+  gmc_enabled: true
+  gmc_method: sparseOptFlow
+  gmc_downscale: 2
+  reid_enabled: true
+  reid_weight: 0.4
+  min_track_length: 5
+  stitch_max_gap_frames: 30
+  stitch_max_distance_px: 120.0
+
+ball_tracking:
+  process_noise: 9.0
+  measurement_noise: 4.0
+  gating_threshold: 9.5
+  max_speed_px_per_frame: 140.0
+  max_interpolation_gap_frames: 12
+  min_track_confidence: 0.25
+  smoothing_window: 5
+  max_hypotheses: 4
+  min_segment_frames: 3
+
+team_classification:
+  # Colour beat the learned embedding by 2x on cluster separation for
+  # broadcast-scale crops. See team_classification/embeddings.py for the numbers.
+  method: color
+  embedding_model: google/siglip-base-patch16-224
+  fit_sample_size: 600
+  fit_stride_frames: 5
+  jersey_top_frac: 0.15
+  jersey_bottom_frac: 0.50
+  jersey_side_margin_frac: 0.15
+  remove_grass: true
+  grass_hue_range: [30, 90]
+  grass_sat_min: 40
+  min_crop_px: 16
+  vote_confidence_threshold: 0.6
+  min_votes: 3
+  goalkeeper_penalty_area_frac: 0.55
+  goalkeeper_min_confidence: 0.5
+
+calibration:
+  enabled: true
+  model_path: models/yolo-football-pitch-detection.pt
+  imgsz: 1280
+  keypoint_conf_threshold: 0.35
+  min_keypoints: 5
+  # In metres of pitch, not pixels - see config.py.
+  ransac_threshold_m: 2.0
+  max_reprojection_error_m: 3.0
+  min_confidence: 0.4
+  max_temporal_jump_m: 8.0
+  temporal_smoothing: true
+  smoothing_window: 9
+  max_carry_forward_frames: 15
+  shot_change_threshold: 0.45
+  calibrate_every_n_frames: 1
+
+reid:
+  jersey_ocr_enabled: false
+  crops_per_track: 24
+  min_digit_confidence: 0.5
+  vote_threshold: 0.45
+  min_votes: 4
+  upscale_factor: 4
+
+pitch:
+  length_m: 105.0
+  width_m: 68.0
+
+visualization:
+  write_annotated_video: true
+  write_tactical_map: true
+  write_combined_video: true
+  output_fps: null
+  ball_trail_frames: 30
+  player_trail_frames: 0
+  show_track_ids: true
+  show_confidence: false
+  radar_width_px: 1050
+  radar_padding_px: 40
+  team_colors:
+    A: [235, 64, 52]
+    B: [52, 132, 235]
+    none: [245, 200, 40]
+    unknown: [150, 150, 150]
+
+storage:
+  output_dir: outputs
+  format: parquet
+  compression: zstd
+  write_raw_detections: true
+  write_tracks: true
+  write_game_state: true
+  keep_intermediate: true
+
+evaluation:
+  annotations_dir: data/annotations
+  tracking_iou_threshold: 0.5
+  small_object_area_px: 1024.0

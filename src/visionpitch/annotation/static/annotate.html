@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>VisionPitch — ball annotation</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1c2128; --line: #2d333b; --text: #e6edf3;
+    --dim: #8b949e; --box: #f0a020; --heat: #40b0ff; --truth: #2ecc71;
+    --warn: #e05252;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 13px/1.5 ui-sans-serif, system-ui, sans-serif; overflow: hidden; }
+  #app { display: grid; grid-template-columns: 1fr 320px; height: 100vh; }
+  #stage { position: relative; overflow: hidden; background: #000; cursor: crosshair; }
+  #canvas { position: absolute; transform-origin: 0 0; image-rendering: pixelated; }
+  #hud { position: absolute; top: 10px; left: 12px; z-index: 5; background: #000a;
+         padding: 6px 10px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+  #hud b { color: #fff; }
+  #side { background: var(--panel); border-left: 1px solid var(--line);
+          padding: 14px; overflow-y: auto; }
+  h2 { margin: 0 0 4px; font-size: 14px; }
+  .muted { color: var(--dim); font-size: 12px; }
+  .row { display: flex; gap: 6px; margin: 6px 0; flex-wrap: wrap; }
+  button { background: #262c36; color: var(--text); border: 1px solid var(--line);
+           border-radius: 5px; padding: 6px 9px; cursor: pointer; font-size: 12px; }
+  button:hover { background: #303844; }
+  button.on { border-color: #6aa2ff; background: #23324a; }
+  .k { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 3px;
+       background: #000; border: 1px solid var(--line); color: var(--dim);
+       font-family: ui-monospace, monospace; font-size: 11px; text-align: center; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+        vertical-align: middle; margin-right: 5px; }
+  .card { border: 1px solid var(--line); border-radius: 6px; padding: 8px;
+          margin-bottom: 10px; background: #171c23; }
+  .status { font-weight: 600; }
+  #toast { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+           background: #000c; padding: 7px 14px; border-radius: 6px; opacity: 0;
+           transition: opacity .18s; z-index: 9; }
+  #toast.show { opacity: 1; }
+  #toast.bad { background: #5c1d1d; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  td { padding: 2px 0; }
+  td.r { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+  progress { width: 100%; height: 6px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="canvas"></canvas>
+    <div id="hud"></div>
+    <div id="toast"></div>
+  </div>
+  <div id="side">
+    <h2>Ball annotation</h2>
+    <div class="muted" id="progressText">loading…</div>
+    <progress id="progressBar" value="0" max="1"></progress>
+
+    <div class="card" id="qcCard" style="display:none">
+      <div><b>QC quotas</b> <span class="muted">scarcest first</span></div>
+      <table id="qcTable"></table>
+      <div class="muted" style="margin-top:6px">
+        A sampler guess of crowd/graphics is <b>not</b> a negative.
+        Mark what you see.
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="frameMeta" class="muted"></div>
+    </div>
+
+    <div class="card">
+      <div><b>Proposals</b> <span class="muted">(neither is the answer)</span></div>
+      <div class="row">
+        <button id="tBox"><span class="sw" style="background:var(--box)"></span>Model A <span class="k">1</span></button>
+        <button id="tHeat"><span class="sw" style="background:var(--heat)"></span>Model B <span class="k">2</span></button>
+      </div>
+      <div id="predInfo" class="muted"></div>
+      <div class="row">
+        <button id="accA">Accept A <span class="k">q</span></button>
+        <button id="accB">Accept B <span class="k">w</span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div><b>Mark frame</b></div>
+      <div class="row">
+        <button data-v="not_visible">Not visible <span class="k">n</span></button>
+        <button data-v="outside_frame">Outside frame <span class="k">o</span></button>
+      </div>
+      <div class="row">
+        <button data-v="ambiguous">Ambiguous <span class="k">a</span></button>
+        <button data-ig="ignore_replay">Replay <span class="k">r</span></button>
+        <button data-ig="ignore_non_live">Non-live <span class="k">l</span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div><b>Ball radius</b>
+        <span class="muted">real ball size, not marker size</span></div>
+      <div class="row" style="align-items:center">
+        <input id="radiusSlider" type="range" min="1" max="60" step="0.5" value="7"
+               style="flex:1;min-width:130px" />
+        <input id="radiusValue" type="number" min="1" max="60" step="0.5" value="7"
+               style="width:62px;background:#0d1117;color:var(--text);border:1px solid var(--line);border-radius:4px;padding:3px 5px" />
+        <span class="muted">px</span>
+      </div>
+      <div class="muted" id="radiusHint">diameter 14.0 px</div>
+      <div class="row">
+        <button id="radDown">− <span class="k">-</span></button>
+        <button id="radUp">+ <span class="k">+</span></button>
+        <button id="radDefault">reset <span class="k">d</span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div><b>Current</b></div>
+      <div id="current" class="status">—</div>
+      <div class="row">
+        <button id="undo">Undo point <span class="k">u</span></button>
+        <button id="save">Save <span class="k">↵</span></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <tr><td>prev / next</td><td class="r">← →</td></tr>
+        <tr><td>next unreviewed</td><td class="r">j</td></tr>
+        <tr><td>context frames</td><td class="r">[ ]</td></tr>
+        <tr><td>zoom</td><td class="r">wheel</td></tr>
+        <tr><td>pan</td><td class="r">middle-drag / space-drag</td></tr>
+        <tr><td>reset view</td><td class="r">0</td></tr>
+        <tr><td>place / move ball</td><td class="r">click / drag</td></tr>
+        <tr><td>resize ball</td><td class="r">drag handle</td></tr>
+        <tr><td>resize (over ball)</td><td class="r">wheel</td></tr>
+        <tr><td>radius ± / fast</td><td class="r">+ − / shift</td></tr>
+        <tr><td>default radius</td><td class="r">d</td></tr>
+      </table>
+    </div>
+    <div class="muted">Reviewer: <input id="reviewer" value="reviewer"
+      style="width:120px;background:#0d1117;color:var(--text);border:1px solid var(--line);border-radius:4px;padding:3px 5px" /></div>
+  </div>
+</div>
+
+<script>
+const S = {
+  frames: [], idx: 0, frame: null, img: new Image(), ctx: null,
+  zoom: 1, ox: 0, oy: 0, panning: false, spaceDown: false,
+  point: null, dragging: false, resizing: false,
+  showBox: false, showHeat: false, contextOffset: 0,
+  visibility: null, ignore: 'none', acceptedFrom: null,
+  // Radius is in SOURCE pixels and is the measurement we store. The marker is
+  // drawn at radius*zoom so it tracks the image, while the handle and hit
+  // targets are sized in screen pixels so they stay usable at any zoom.
+  radius: 7, defaultRadius: 7, minRadius: 1, maxRadius: 60,
+  mouse: null,
+};
+
+const HANDLE_SCREEN_PX = 6;     // drawn size of the resize grip
+const GRAB_SCREEN_PX = 9;       // how close the cursor must be to grab it
+
+function clampRadius(r) {
+  return Math.max(S.minRadius, Math.min(S.maxRadius, Math.round(r * 2) / 2));
+}
+
+function setRadius(r, quiet) {
+  S.radius = clampRadius(r);
+  const slider = document.getElementById('radiusSlider');
+  const value = document.getElementById('radiusValue');
+  if (slider) slider.value = S.radius;
+  if (value) value.value = S.radius;
+  const hint = document.getElementById('radiusHint');
+  if (hint) hint.textContent = `diameter ${(S.radius * 2).toFixed(1)} px`;
+  if (!quiet) { draw(); updateCurrent(); }
+}
+
+/** Screen-space distance from the cursor to the resize handle, in px. */
+function handleDistance(imgPoint) {
+  if (!S.point || !imgPoint) return Infinity;
+  const hx = S.point.x + S.radius, hy = S.point.y;
+  return Math.hypot(imgPoint.x - hx, imgPoint.y - hy) * S.zoom;
+}
+
+function overBall(imgPoint) {
+  if (!S.point || !imgPoint) return false;
+  const d = Math.hypot(imgPoint.x - S.point.x, imgPoint.y - S.point.y) * S.zoom;
+  // A generous target: at 100% zoom a 7 px ball is a 14 px circle, which is
+  // hard to be "over" precisely.
+  return d <= Math.max(S.radius * S.zoom, 10) + GRAB_SCREEN_PX;
+}
+
+const canvas = document.getElementById('canvas');
+S.ctx = canvas.getContext('2d');
+
+function toast(msg, bad) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = '', 2200);
+}
+
+async function loadList() {
+  const r = await fetch('/api/frames'); const d = await r.json();
+  S.frames = d.frames;
+  const p = await (await fetch('/api/progress')).json();
+  document.getElementById('progressText').textContent =
+    (p.qc_mode ? 'QC queue: ' : '') +
+    `${p.n_annotated} / ${p.n_samples} annotated — ${p.n_remaining} left`;
+  const bar = document.getElementById('progressBar');
+  bar.max = p.n_samples; bar.value = p.n_annotated;
+  if (p.qc_mode) loadQuotas();
+}
+
+async function loadQuotas() {
+  let q;
+  try { q = await (await fetch('/api/qc')).json(); } catch (e) { return; }
+  document.getElementById('qcCard').style.display = '';
+  const rows = [];
+  const neg = q.negative_quota;
+  const bar = (have, target) => {
+    const pct = Math.min(100, Math.round(100 * have / Math.max(1, target)));
+    const colour = have >= target ? 'var(--truth)' : 'var(--box)';
+    return `<span style="color:${colour}">${have}/${target}</span>`;
+  };
+  rows.push(`<tr><td><b>genuine negatives</b></td>` +
+            `<td class="r">${bar(neg.achieved, neg.target)}</td></tr>`);
+  for (const [name, quota] of Object.entries(q.category_quotas)) {
+    if (name === 'crowd_negative' || name === 'broadcast_graphic') continue;
+    rows.push(`<tr><td>${name.replace(/_/g, ' ')}</td>` +
+              `<td class="r">${bar(quota.achieved, quota.target)}</td></tr>`);
+  }
+  const w = q.temporal_windows;
+  rows.push(`<tr><td>complete windows</td>` +
+            `<td class="r">${bar(w.complete_now, w.target_complete)}</td></tr>`);
+  document.getElementById('qcTable').innerHTML = rows.join('');
+}
+
+async function load(i) {
+  if (i < 0 || i >= S.frames.length) return;
+  S.idx = i;
+  const id = S.frames[i].frame_id;
+  const d = await (await fetch('/api/frame/' + id)).json();
+  S.frame = d;
+  S.point = null; S.visibility = null; S.ignore = 'none';
+  S.acceptedFrom = null; S.contextOffset = 0;
+  // Proposals start hidden: pre-loading one as the working point would bake
+  // that model's bias into the ground truth exactly where the reviewer is unsure.
+  S.showBox = false; S.showHeat = false;
+  // The radius carries over between frames on purpose. Ball size changes slowly
+  // across a passage of play, so the previous frame's value is a better starting
+  // point than a constant, and it saves adjusting on every frame.
+  setRadius(S.radius, true);
+
+  if (d.annotation) {
+    S.visibility = d.annotation.visibility;
+    S.ignore = d.annotation.ignore_reason;
+    if (d.annotation.centre_x != null)
+      S.point = { x: d.annotation.centre_x, y: d.annotation.centre_y };
+    if (d.annotation.radius_px != null) setRadius(d.annotation.radius_px, true);
+    else if (d.annotation.bbox) {
+      const b = d.annotation.bbox;
+      setRadius(((b[2] - b[0]) + (b[3] - b[1])) / 4, true);
+    }
+  }
+  S.img.onload = () => { fitView(); draw(); };
+  S.img.src = `/api/image/${id}?offset=0&t=${Date.now()}`;
+  renderMeta();
+}
+
+function renderMeta() {
+  const s = S.frame.sample;
+  document.getElementById('frameMeta').innerHTML =
+    `<b>${s.frame_id}</b> &nbsp; ${S.frame.position + 1}/${S.frame.total}<br>` +
+    `t=${s.timestamp_s.toFixed(2)}s · frame ${s.frame_idx}<br>` +
+    `shot ${s.shot_index} (${s.shot_type})${s.likely_slow_motion ? ' · likely slow-mo' : ''}<br>` +
+    `<i>${s.sampling_category}</i> — ${s.sampling_reason}` +
+    (s.window_id ? `<br>window ${s.window_id}` : '');
+  const preds = S.frame.predictions || [];
+  document.getElementById('predInfo').innerHTML = preds.length
+    ? preds.map(p => `${p.model_label}: ` +
+        (p.centre_x == null ? 'no detection'
+          : `(${p.centre_x.toFixed(0)}, ${p.centre_y.toFixed(0)}) conf ${p.confidence.toFixed(2)}`)).join('<br>')
+    : 'no proposals for this frame';
+  updateCurrent();
+}
+
+function updateCurrent() {
+  const el = document.getElementById('current');
+  let text;
+  if (S.ignore !== 'none') text = `IGNORED (${S.ignore})`;
+  else if (S.visibility) text = S.visibility.toUpperCase();
+  else if (S.point) text =
+    `VISIBLE at (${S.point.x.toFixed(0)}, ${S.point.y.toFixed(0)}) · ` +
+    `r ${S.radius.toFixed(1)} px`;
+  else text = '— nothing marked yet';
+  if (S.acceptedFrom) text += ` · accepted ${S.acceptedFrom}`;
+  el.textContent = text;
+  el.style.color = (S.point || S.visibility || S.ignore !== 'none') ? 'var(--truth)' : 'var(--dim)';
+  document.getElementById('tBox').className = S.showBox ? 'on' : '';
+  document.getElementById('tHeat').className = S.showHeat ? 'on' : '';
+}
+
+function fitView() {
+  const st = document.getElementById('stage');
+  S.zoom = Math.min(st.clientWidth / S.img.width, st.clientHeight / S.img.height);
+  S.ox = (st.clientWidth - S.img.width * S.zoom) / 2;
+  S.oy = (st.clientHeight - S.img.height * S.zoom) / 2;
+}
+
+function draw() {
+  if (!S.img.width) return;
+  canvas.width = S.img.width; canvas.height = S.img.height;
+  canvas.style.transform = `translate(${S.ox}px,${S.oy}px) scale(${S.zoom})`;
+  const c = S.ctx;
+  c.clearRect(0, 0, canvas.width, canvas.height);
+  c.drawImage(S.img, 0, 0);
+
+  const preds = S.frame ? (S.frame.predictions || []) : [];
+  preds.forEach(p => {
+    const on = (p.model_label === 'box_detector' && S.showBox)
+            || (p.model_label === 'heatmap_detector' && S.showHeat);
+    if (!on || p.centre_x == null) return;
+    const col = p.model_label === 'box_detector' ? '#f0a020' : '#40b0ff';
+    c.strokeStyle = col; c.lineWidth = 1.2 / S.zoom;
+    c.beginPath(); c.arc(p.centre_x, p.centre_y, 14 / S.zoom, 0, 7); c.stroke();
+    c.beginPath(); c.moveTo(p.centre_x - 20 / S.zoom, p.centre_y);
+    c.lineTo(p.centre_x + 20 / S.zoom, p.centre_y);
+    c.moveTo(p.centre_x, p.centre_y - 20 / S.zoom);
+    c.lineTo(p.centre_x, p.centre_y + 20 / S.zoom); c.stroke();
+  });
+
+  if (S.point) {
+    const r = S.radius;
+    // The ball circle is drawn at TRUE radius, so what you see is the size that
+    // gets stored. Line widths are divided by zoom so they stay hairline-thin
+    // and never obscure an 11 px ball.
+    c.strokeStyle = '#2ecc71'; c.lineWidth = 1.5 / S.zoom;
+    c.beginPath(); c.arc(S.point.x, S.point.y, r, 0, 7); c.stroke();
+
+    // Derived box, shown faintly: it is what the dataset stores alongside the
+    // radius, so it should be visible rather than implied.
+    c.strokeStyle = 'rgba(46,204,113,0.35)';
+    c.lineWidth = 1 / S.zoom;
+    c.strokeRect(S.point.x - r, S.point.y - r, r * 2, r * 2);
+
+    // Centre cross, sized in screen pixels so it stays findable at any zoom.
+    const arm = 7 / S.zoom;
+    c.strokeStyle = '#2ecc71'; c.lineWidth = 1.2 / S.zoom;
+    c.beginPath();
+    c.moveTo(S.point.x - arm, S.point.y); c.lineTo(S.point.x + arm, S.point.y);
+    c.moveTo(S.point.x, S.point.y - arm); c.lineTo(S.point.x, S.point.y + arm);
+    c.stroke();
+
+    // Resize handle on the right edge of the circle.
+    const hr = HANDLE_SCREEN_PX / S.zoom;
+    c.fillStyle = S.resizing ? '#ffffff' : '#2ecc71';
+    c.strokeStyle = '#0b3d24'; c.lineWidth = 1 / S.zoom;
+    c.beginPath(); c.arc(S.point.x + r, S.point.y, hr, 0, 7);
+    c.fill(); c.stroke();
+  }
+  document.getElementById('hud').innerHTML =
+    `<b>${(S.zoom * 100).toFixed(0)}%</b>` +
+    (S.contextOffset ? ` · context ${S.contextOffset > 0 ? '+' : ''}${S.contextOffset}` : '') +
+    (S.point ? ` · x ${S.point.x.toFixed(1)} y ${S.point.y.toFixed(1)}` +
+               ` · r ${S.radius.toFixed(1)} px (⌀ ${(S.radius * 2).toFixed(1)})` : '');
+}
+
+function toImage(ev) {
+  const r = document.getElementById('stage').getBoundingClientRect();
+  return {
+    x: (ev.clientX - r.left - S.ox) / S.zoom,
+    y: (ev.clientY - r.top - S.oy) / S.zoom,
+  };
+}
+
+const stage = document.getElementById('stage');
+stage.addEventListener('mousedown', ev => {
+  if (ev.button === 1 || S.spaceDown) { S.panning = true; S._px = ev.clientX; S._py = ev.clientY; ev.preventDefault(); return; }
+  if (ev.button !== 0) return;
+  const p = toImage(ev);
+
+  // The handle wins over placing a new point, so a click on the grip resizes
+  // rather than teleporting the ball to the grip's position.
+  if (S.point && handleDistance(p) <= GRAB_SCREEN_PX) {
+    S.resizing = true; draw(); return;
+  }
+  // Clicking inside an existing ball moves it and keeps its radius.
+  if (S.point && overBall(p)) {
+    S.dragging = true; draw(); return;
+  }
+
+  S.point = { x: Math.max(0, Math.min(S.img.width, p.x)), y: Math.max(0, Math.min(S.img.height, p.y)) };
+  S.visibility = 'visible'; S.ignore = 'none'; S.acceptedFrom = null;
+  S.dragging = true; draw(); updateCurrent();
+});
+
+stage.addEventListener('mousemove', ev => {
+  const p = toImage(ev);
+  S.mouse = p;
+  if (S.panning) { S.ox += ev.clientX - S._px; S.oy += ev.clientY - S._py; S._px = ev.clientX; S._py = ev.clientY; draw(); return; }
+  if (S.resizing && S.point) {
+    // Radius follows the cursor's distance from the fixed centre.
+    setRadius(Math.hypot(p.x - S.point.x, p.y - S.point.y));
+    return;
+  }
+  if (S.dragging && S.point) {
+    S.point = { x: Math.max(0, Math.min(S.img.width, p.x)), y: Math.max(0, Math.min(S.img.height, p.y)) };
+    draw(); updateCurrent();
+    return;
+  }
+  // Cursor feedback so the handle is discoverable without reading the guide.
+  stage.style.cursor = (S.point && handleDistance(p) <= GRAB_SCREEN_PX)
+    ? 'ew-resize'
+    : (S.point && overBall(p)) ? 'move' : 'crosshair';
+});
+
+window.addEventListener('mouseup', () => {
+  S.panning = false; S.dragging = false; S.resizing = false;
+  draw();
+});
+
+stage.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const p = toImage(ev);
+  // Over the active ball the wheel resizes it; anywhere else it zooms. Without
+  // this split, adjusting a 7 px radius means zooming the image first, then
+  // hunting the slider.
+  if (S.point && overBall(p)) {
+    const step = ev.shiftKey ? 2 : 0.5;
+    setRadius(S.radius + (ev.deltaY < 0 ? step : -step));
+    return;
+  }
+  const r = stage.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  const f = ev.deltaY < 0 ? 1.18 : 1 / 1.18;
+  const nz = Math.max(0.1, Math.min(40, S.zoom * f));
+  S.ox = mx - (mx - S.ox) * (nz / S.zoom);
+  S.oy = my - (my - S.oy) * (nz / S.zoom);
+  S.zoom = nz; draw();
+}, { passive: false });
+
+async function save() {
+  if (!S.frame) return;
+  const s = S.frame.sample;
+  let visibility = S.visibility;
+  if (S.ignore !== 'none' && !visibility) visibility = 'ambiguous';
+  if (!visibility) { toast('Nothing marked — click the ball or press n / o / a', true); return; }
+
+  const body = {
+    frame_id: s.frame_id,
+    visibility,
+    ignore_reason: S.ignore,
+    centre_x: visibility === 'visible' ? S.point?.x ?? null : null,
+    centre_y: visibility === 'visible' ? S.point?.y ?? null : null,
+    // Radius only; the server derives the box from centre and radius so the two
+    // cannot disagree.
+    radius_px: visibility === 'visible' ? S.radius : null,
+    annotation_confidence: 1.0,
+    ambiguity_reason: visibility === 'ambiguous'
+      ? (S.ignore !== 'none' ? S.ignore : 'reviewer could not determine') : '',
+    reviewer: document.getElementById('reviewer').value || 'reviewer',
+    review_status: 'first_pass',
+    accepted_proposal_from: S.acceptedFrom,
+  };
+  const r = await fetch('/api/annotate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) { toast('Rejected: ' + (await r.json()).detail, true); return; }
+  toast('saved ' + s.frame_id);
+  await loadList();
+  if (S.idx + 1 < S.frames.length) load(S.idx + 1);
+}
+
+function accept(label) {
+  const p = (S.frame.predictions || []).find(x => x.model_label === label);
+  if (!p || p.centre_x == null) { toast('that model proposed nothing here', true); return; }
+  S.point = { x: p.centre_x, y: p.centre_y };
+  // Take the proposal's size too when it has a real box. The heatmap model's
+  // box is synthesised at a fixed nominal size, so it carries no size
+  // information and the current radius is kept instead.
+  if (p.bbox && label === 'box_detector') {
+    setRadius(((p.bbox[2] - p.bbox[0]) + (p.bbox[3] - p.bbox[1])) / 4, true);
+  }
+  S.visibility = 'visible'; S.ignore = 'none'; S.acceptedFrom = label;
+  draw(); updateCurrent();
+}
+
+async function showContext(delta) {
+  const offs = S.frame.context_offsets || [];
+  const next = S.contextOffset + delta;
+  if (next !== 0 && !offs.includes(next)) { toast('no context frame at ' + next); return; }
+  S.contextOffset = next;
+  S.img.onload = draw;
+  S.img.src = `/api/image/${S.frame.sample.frame_id}?offset=${next}&t=${Date.now()}`;
+}
+
+document.addEventListener('keydown', async ev => {
+  if (ev.target.tagName === 'INPUT') return;
+  if (ev.code === 'Space') { S.spaceDown = true; ev.preventDefault(); return; }
+  const k = ev.key.toLowerCase();
+  if (k === 'arrowleft') load(S.idx - 1);
+  else if (k === 'arrowright') load(S.idx + 1);
+  else if (k === 'enter') save();
+  else if (k === '1') { S.showBox = !S.showBox; draw(); updateCurrent(); }
+  else if (k === '2') { S.showHeat = !S.showHeat; draw(); updateCurrent(); }
+  else if (k === 'q') accept('box_detector');
+  else if (k === 'w') accept('heatmap_detector');
+  else if (k === 'n') { S.visibility = 'not_visible'; S.point = null; S.acceptedFrom = null; draw(); updateCurrent(); }
+  else if (k === 'o') { S.visibility = 'outside_frame'; S.point = null; S.acceptedFrom = null; draw(); updateCurrent(); }
+  else if (k === 'a') { S.visibility = 'ambiguous'; S.point = null; S.acceptedFrom = null; draw(); updateCurrent(); }
+  else if (k === 'r') { S.ignore = S.ignore === 'ignore_replay' ? 'none' : 'ignore_replay'; updateCurrent(); }
+  else if (k === 'l') { S.ignore = S.ignore === 'ignore_non_live' ? 'none' : 'ignore_non_live'; updateCurrent(); }
+  else if (k === 'u') { S.point = null; S.visibility = null; S.acceptedFrom = null; draw(); updateCurrent(); }
+  else if (k === '0') { fitView(); draw(); }
+  // Radius keys. '=' is the unshifted '+' on most layouts, and shift gives the
+  // coarse step so one key covers both fine and fast adjustment.
+  else if (k === '+' || k === '=') { ev.preventDefault(); setRadius(S.radius + (ev.shiftKey ? 2 : 0.5)); }
+  else if (k === '-' || k === '_') { ev.preventDefault(); setRadius(S.radius - (ev.shiftKey ? 2 : 0.5)); }
+  else if (k === 'd') setRadius(S.defaultRadius);
+  else if (k === '[') showContext(-1);
+  else if (k === ']') showContext(1);
+  else if (k === 'j') {
+    const d = await (await fetch('/api/next-unreviewed?after=' + S.frame.sample.frame_id)).json();
+    if (!d.frame_id) { toast('all frames annotated'); return; }
+    load(S.frames.findIndex(f => f.frame_id === d.frame_id));
+  }
+});
+document.addEventListener('keyup', ev => { if (ev.code === 'Space') S.spaceDown = false; });
+
+document.getElementById('tBox').onclick = () => { S.showBox = !S.showBox; draw(); updateCurrent(); };
+document.getElementById('tHeat').onclick = () => { S.showHeat = !S.showHeat; draw(); updateCurrent(); };
+document.getElementById('accA').onclick = () => accept('box_detector');
+document.getElementById('accB').onclick = () => accept('heatmap_detector');
+document.getElementById('undo').onclick = () => { S.point = null; S.visibility = null; S.acceptedFrom = null; draw(); updateCurrent(); };
+document.getElementById('save').onclick = save;
+document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => {
+  S.visibility = b.dataset.v; S.point = null; S.acceptedFrom = null; draw(); updateCurrent();
+});
+document.getElementById('radiusSlider').oninput = e => setRadius(parseFloat(e.target.value));
+document.getElementById('radiusValue').onchange = e => setRadius(parseFloat(e.target.value));
+document.getElementById('radUp').onclick = () => setRadius(S.radius + 0.5);
+document.getElementById('radDown').onclick = () => setRadius(S.radius - 0.5);
+document.getElementById('radDefault').onclick = () => setRadius(S.defaultRadius);
+document.querySelectorAll('[data-ig]').forEach(b => b.onclick = () => {
+  S.ignore = S.ignore === b.dataset.ig ? 'none' : b.dataset.ig; updateCurrent();
+});
+window.addEventListener('resize', () => { fitView(); draw(); });
+
+(async () => {
+  // Bounds come from the server so the slider cannot offer a value that
+  // validation would reject on save.
+  try {
+    const cfg = await (await fetch('/api/defaults')).json();
+    S.defaultRadius = cfg.default_radius_px;
+    S.minRadius = cfg.min_radius_px;
+    S.maxRadius = cfg.max_radius_px;
+    for (const id of ['radiusSlider', 'radiusValue']) {
+      const el = document.getElementById(id);
+      el.min = S.minRadius; el.max = S.maxRadius;
+    }
+    setRadius(S.defaultRadius, true);
+  } catch (e) { /* fall back to the built-in defaults */ }
+
+  await loadList();
+  const d = await (await fetch('/api/next-unreviewed')).json();
+  const start = d.frame_id ? S.frames.findIndex(f => f.frame_id === d.frame_id) : 0;
+  load(Math.max(0, start));
+})();
+</script>
+</body>
+</html>

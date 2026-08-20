@@ -1,0 +1,51 @@
+{
+  "schema": "VISIONPITCH_FINAL_HOLDOUT_V1",
+  "status": "UNPOPULATED_BLOCKING_FINAL_CLAIMS",
+  "legacy_test": {
+    "path": "data/eval/gsr",
+    "status": "LEGACY_CONTAMINATED_TEST",
+    "allowed_use": "historical comparisons only",
+    "forbidden_use": [
+      "pristine final benchmark",
+      "training",
+      "threshold tuning",
+      "model selection"
+    ]
+  },
+  "selection_unit": "complete source clip or match; never frames",
+  "preferred_source": {
+    "type": "new target-domain broadcast-style football clips",
+    "provenance": "Wikimedia Commons or equivalent source with an explicit reusable licence",
+    "minimum": "six clips from at least three matches, acquired only after the development model and thresholds are frozen",
+    "annotation": [
+      "four-class detection",
+      "player identity tracks",
+      "ball trajectory/visibility",
+      "pitch landmarks sufficient for calibration scoring"
+    ]
+  },
+  "local_data_audit": {
+    "official_sngsr_train_valid": "development data",
+    "official_sngsr_test": "historically contaminated through earlier ball experiments",
+    "data_raw_wikimedia_clips": "legally documented but already used during development",
+    "root_demo_video": "already used for development/demo and has insufficient checked licence metadata",
+    "independent_untouched_target_domain_sequences_found": 0
+  },
+  "freeze_protocol": {
+    "prerequisites": [
+      "record source URL, author, licence, retrieval date, and whole-file SHA-256",
+      "deduplicate by source match and content hash against every development asset",
+      "record complete clip boundaries before annotation",
+      "freeze model checkpoint, code revision, configuration, and thresholds before labels are revealed"
+    ],
+    "access": "labels remain sealed until one final evaluation",
+    "prohibited": [
+      "training",
+      "augmentation source",
+      "error-driven code changes",
+      "threshold tuning",
+      "checkpoint selection"
+    ]
+  },
+  "holdout_items": []
+}

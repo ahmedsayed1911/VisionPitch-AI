@@ -1,0 +1,23 @@
+# Normalise text to LF in the repository; check out native on each platform.
+* text=auto
+
+# Explicitly binary, so no end-of-line translation is ever attempted.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.mp4  binary
+*.webm binary
+*.pt   binary
+*.pth  binary
+*.onnx binary
+*.engine binary
+*.parquet binary
+*.zip  binary
+
+# Generated lockfiles: collapse in review, still diffable on request.
+uv.lock            linguist-generated=true
+web/package-lock.json linguist-generated=true
+
+# GitHub language stats should reflect the pipeline, not the notebooks/docs.
+docs/**            linguist-documentation=true

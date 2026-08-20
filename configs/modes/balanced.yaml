@@ -1,0 +1,35 @@
+# Balanced - the default. Every frame processed, both detectors active,
+# appearance-assisted tracking with camera motion compensation.
+#
+# This is the mode the reported Phase 1 evaluation numbers are measured in
+# unless the report states otherwise.
+
+runtime:
+  half_precision: true
+  batch_size: 16
+
+ingestion:
+  frame_stride: 1
+
+detection:
+  imgsz: 1280
+
+ball_detection:
+  enabled: true
+  # Phase 2E: 640 -> 1280. Measured on VALID, centre recall@25px 0.4584 -> 0.8056
+  # and median localisation error 3.45px -> 2.08px, at ~30% lower throughput
+  # (18.2 -> 13.9 fps on a 3090 Ti). 1536 was measured and is worse: it adds
+  # false positives without adding recall.
+  imgsz: 1280
+  tiled_every_n_frames: 1
+
+tracking:
+  tracker: botsort
+  reid_enabled: true
+  gmc_enabled: true
+
+team_classification:
+  method: color
+
+calibration:
+  calibrate_every_n_frames: 1

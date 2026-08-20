@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Known limitations
+    url: https://github.com/ahmedsayed1911/VisionPitch-AI/blob/main/docs/LIMITATIONS.md
+    about: Ranked accuracy bottlenecks with measurements. Check here first.
+  - name: Model and dataset setup
+    url: https://github.com/ahmedsayed1911/VisionPitch-AI/blob/main/models/REGISTRY.md
+    about: Which checkpoints exist, where they come from, and which are not distributed.

@@ -1,0 +1,48 @@
+# Fast preview - lowest latency, for checking a video is usable at all.
+#
+# Trade-offs made explicit: every frame is NOT processed, the specialist ball
+# pass is disabled, appearance re-identification is off, and calibration runs at
+# a quarter rate. Expect materially worse ball recall and more ID switches than
+# balanced mode. Do not quote accuracy numbers measured in this mode.
+
+runtime:
+  half_precision: true
+  batch_size: 32
+
+ingestion:
+  frame_stride: 3
+
+detection:
+  imgsz: 960
+  conf_threshold: 0.3
+  class_conf_overrides:
+    ball: 0.20
+    goalkeeper: 0.35
+    referee: 0.35
+
+ball_detection:
+  enabled: false
+
+tracking:
+  tracker: bytetrack
+  reid_enabled: false
+  gmc_enabled: true
+  gmc_downscale: 4
+  track_buffer: 30
+
+ball_tracking:
+  max_interpolation_gap_frames: 6
+
+team_classification:
+  method: color
+  fit_sample_size: 200
+  fit_stride_frames: 10
+
+calibration:
+  imgsz: 960
+  calibrate_every_n_frames: 4
+  smoothing_window: 5
+
+visualization:
+  write_combined_video: false
+  ball_trail_frames: 15

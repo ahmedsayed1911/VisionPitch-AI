@@ -1,0 +1,69 @@
+{
+  "schema": "VISIONPITCH_TRAINING_DATA_V1",
+  "dataset": "SoccerNet Game State Reconstruction",
+  "task": "four-class object detection",
+  "source_splits": [
+    "train",
+    "valid"
+  ],
+  "split_policy": "official split boundaries preserved; no internal re-split",
+  "sampling_policy": {
+    "uniform": "deterministic sequence-phased stride 3",
+    "hard_frames": "additional stride 6 for crowded, tiny-ball, or distant-person frames",
+    "transitions": "all changes in canonical class-presence signature",
+    "ball_negatives": "additional deterministic stride 9 where no ball is annotated",
+    "oversampling": false
+  },
+  "class_names": {
+    "0": "player",
+    "1": "goalkeeper",
+    "2": "referee",
+    "3": "ball"
+  },
+  "frames_file": "frames.jsonl",
+  "exported_frames": 41278,
+  "frames_by_split": {
+    "train": 20302,
+    "valid": 20976
+  },
+  "objects_by_split_and_class": {
+    "train": {
+      "player": 288376,
+      "goalkeeper": 11289,
+      "referee": 29509,
+      "ball": 19583
+    },
+    "valid": {
+      "player": 300614,
+      "goalkeeper": 12375,
+      "referee": 30338,
+      "ball": 19802
+    }
+  },
+  "negative_frames": {
+    "train_empty": 0,
+    "train_ball_negative": 1070,
+    "valid_empty": 0,
+    "valid_ball_negative": 1407
+  },
+  "sampling_reason_counts": {
+    "train": {
+      "uniform_stride_3": 14250,
+      "sequence_boundary": 114,
+      "hard_frame_stride_6": 5744,
+      "class_presence_transition": 435,
+      "ball_negative_stride_9": 281
+    },
+    "valid": {
+      "uniform_stride_3": 14500,
+      "sequence_boundary": 116,
+      "hard_frame_stride_6": 6149,
+      "class_presence_transition": 455,
+      "ball_negative_stride_9": 346
+    }
+  },
+  "link_methods": {
+    "hardlink": 41278
+  },
+  "legacy_test_status": "LEGACY_CONTAMINATED_TEST; excluded"
+}

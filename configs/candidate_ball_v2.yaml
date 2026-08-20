@@ -1,0 +1,191 @@
+# VisionPitch AI - Phase 2E ball candidate (reversible; production untouched).
+#
+# This is configs/default.yaml with the `balanced` mode overlay already merged
+# in and only the ball_detection block changed. The `mode:` key is deliberately
+# absent: load_config merges configs/modes/<mode>.yaml *on top of* the base file,
+# so leaving it set would re-apply balanced.yaml and reset ball imgsz to 640.
+# Everything outside ball_detection is byte-identical to resolved production.
+#
+# Selected on canonical SN-GSR VALID (SNGS-021..028, fingerprint 9448640d2e7ae6a8)
+# by a detector x confidence x resolution sweep scored on downstream possession,
+# not detector AP. ball_gsrtrain_v2c continues v2 to genuine convergence.
+# Against the shipped baseline it strictly dominates every measured metric:
+#   recall@10px 0.3924 -> 0.7202   recall@15px 0.4280 -> 0.7693
+#   recall@25px 0.4584 -> 0.8056   precision   0.8277 -> 0.9035
+#   F1          0.5900 -> 0.8517   determinability 0.5350 -> 0.8612
+#   possession team F1 0.3669 -> 0.5131   holder accuracy 0.9261 -> 0.9888
+#   median localisation error 3.45px -> 2.08px   p90 275.6px -> 19.5px
+#   FP/frame 0.0922 -> 0.083 (an improvement, not parity)
+# Wins on 8/8 VALID sequences for determinability, recall@25, team F1 and
+# prediction coverage. Team F1 reaches 92% of the annotated-ball reference.
+#
+# conf stays at the shipped 0.08: 0.07 was measured and is indistinguishable
+# downstream (team F1 0.5138 vs 0.5131) but leaves only 2% FP headroom against
+# the baseline budget, where 0.08 leaves 10% and has better holder accuracy.
+# Keeping it also means this config differs from production in only two fields.
+#
+# ball_gsrtrain_v2 is also the only ball checkpoint on disk with clean
+# provenance; every other one was fine-tuned on SN-GSR *test* frames.
+# See docs/PHASE2E_BALL_OPERATING_POINT.md.
+#
+# Invocation - no --set needed:
+#   python -m visionpitch.cli analyse <video> -c configs/candidate_ball_v2.yaml
+#
+# This file sets `apply_mode_overlay: false`. The CLI always passes a --mode
+# (default balanced) and load_config normally merges configs/modes/<mode>.yaml
+# on top of the base file; balanced.yaml pins ball_detection.imgsz: 640, which
+# would silently override the 1280 selected here. The flag declares that this
+# file is already fully resolved (the balanced overlay is merged in below), so
+# the overlay is skipped. `mode` is still reported as balanced in the resolved
+# config and the run manifest.
+#
+# Rollback: delete this file, or run without --config. Nothing else references it.
+
+apply_mode_overlay: false
+mode: balanced
+
+runtime:
+  device: auto
+  half_precision: true
+  batch_size: 16
+  num_workers: 4
+  seed: 1234
+ingestion:
+  frame_stride: 1
+  start_time_s: null
+  end_time_s: null
+  max_frames: null
+  checkpoint_every: 500
+  max_corrupt_frame_ratio: 0.02
+detection:
+  backend: football
+  model_path: models/yolo-football-player-detection.pt
+  imgsz: 1280
+  augment: false
+  conf_threshold: 0.25
+  iou_threshold: 0.5
+  max_detections: 60
+  small_object_area_px: 1024.0
+  class_conf_overrides:
+    ball: 0.1
+    goalkeeper: 0.3
+    referee: 0.3
+ball_detection:
+  enabled: true
+  model_path: models/finetune/ball_gsrtrain_v2c/weights/best.pt
+  imgsz: 1280
+  conf_threshold: 0.08
+  roi_size_px: 640
+  tiled_fallback: true
+  tile_rows: 2
+  tile_cols: 3
+  tile_overlap: 0.2
+  tiled_every_n_frames: 1
+tracking:
+  tracker: botsort
+  track_high_threshold: 0.5
+  track_low_threshold: 0.1
+  new_track_threshold: 0.6
+  track_buffer: 60
+  match_threshold: 0.8
+  gmc_enabled: true
+  gmc_method: sparseOptFlow
+  gmc_downscale: 2
+  reid_enabled: true
+  reid_weight: 0.4
+  min_track_length: 5
+  stitch_max_gap_frames: 30
+  stitch_max_distance_px: 120.0
+ball_tracking:
+  process_noise: 9.0
+  measurement_noise: 4.0
+  gating_threshold: 9.5
+  max_speed_px_per_frame: 140.0
+  max_interpolation_gap_frames: 12
+  min_track_confidence: 0.25
+  smoothing_window: 5
+  max_hypotheses: 4
+  min_segment_frames: 3
+team_classification:
+  method: color
+  embedding_model: google/siglip-base-patch16-224
+  fit_sample_size: 600
+  fit_stride_frames: 5
+  jersey_top_frac: 0.15
+  jersey_bottom_frac: 0.5
+  jersey_side_margin_frac: 0.15
+  remove_grass: true
+  grass_hue_range:
+  - 30
+  - 90
+  grass_sat_min: 40
+  min_crop_px: 16
+  vote_confidence_threshold: 0.6
+  min_votes: 3
+  goalkeeper_penalty_area_frac: 0.55
+  goalkeeper_min_confidence: 0.5
+calibration:
+  enabled: true
+  model_path: models/yolo-football-pitch-detection.pt
+  imgsz: 1280
+  keypoint_conf_threshold: 0.35
+  min_keypoints: 5
+  ransac_threshold_m: 2.0
+  max_reprojection_error_m: 3.0
+  min_confidence: 0.4
+  max_temporal_jump_m: 8.0
+  temporal_smoothing: true
+  smoothing_window: 9
+  max_carry_forward_frames: 15
+  shot_change_threshold: 0.45
+  calibrate_every_n_frames: 1
+reid:
+  jersey_ocr_enabled: false
+  crops_per_track: 24
+  min_digit_confidence: 0.5
+  vote_threshold: 0.45
+  min_votes: 4
+  upscale_factor: 4
+pitch:
+  length_m: 105.0
+  width_m: 68.0
+visualization:
+  write_annotated_video: true
+  write_tactical_map: true
+  write_combined_video: true
+  output_fps: null
+  ball_trail_frames: 30
+  player_trail_frames: 0
+  show_track_ids: true
+  show_confidence: false
+  radar_width_px: 1050
+  radar_padding_px: 40
+  team_colors:
+    A:
+    - 235
+    - 64
+    - 52
+    B:
+    - 52
+    - 132
+    - 235
+    none:
+    - 245
+    - 200
+    - 40
+    unknown:
+    - 150
+    - 150
+    - 150
+storage:
+  output_dir: outputs
+  format: parquet
+  compression: zstd
+  write_raw_detections: true
+  write_tracks: true
+  write_game_state: true
+  keep_intermediate: true
+evaluation:
+  annotations_dir: data/annotations
+  tracking_iou_threshold: 0.5
+  small_object_area_px: 1024.0

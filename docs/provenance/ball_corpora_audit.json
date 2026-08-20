@@ -1,0 +1,120 @@
+{
+  "multicorpus": {
+    "train": {
+      "roboflow": {
+        "n_images": 937,
+        "n_positive": 906,
+        "n_negative_no_ball": 31,
+        "n_balls": 906,
+        "negative_share": 0.0331,
+        "ball_area_px2": {
+          "median": 146.3,
+          "share_tiny_lt150": 0.5221,
+          "share_small_lt400": 0.9757
+        },
+        "share_blurred": 0.0022,
+        "share_low_contrast": 0.9161
+      },
+      "soccernet_gsr": {
+        "n_images": 1528,
+        "n_positive": 1401,
+        "n_negative_no_ball": 127,
+        "n_balls": 1421,
+        "negative_share": 0.0831,
+        "ball_area_px2": {
+          "median": 240.0,
+          "share_tiny_lt150": 0.228,
+          "share_small_lt400": 0.7537
+        },
+        "share_blurred": 0.0077,
+        "share_low_contrast": 0.7094
+      }
+    },
+    "val": {
+      "roboflow": {
+        "n_images": 85,
+        "n_positive": 85,
+        "n_negative_no_ball": 0,
+        "n_balls": 85,
+        "negative_share": 0.0,
+        "ball_area_px2": {
+          "median": 99.4,
+          "share_tiny_lt150": 0.8706,
+          "share_small_lt400": 1.0
+        },
+        "share_blurred": 0.0118,
+        "share_low_contrast": 0.9882
+      },
+      "soccernet_gsr": {
+        "n_images": 378,
+        "n_positive": 350,
+        "n_negative_no_ball": 28,
+        "n_balls": 350,
+        "negative_share": 0.0741,
+        "ball_area_px2": {
+          "median": 276.0,
+          "share_tiny_lt150": 0.1343,
+          "share_small_lt400": 0.7571
+        },
+        "share_blurred": 0.0057,
+        "share_low_contrast": 0.5829
+      }
+    },
+    "test": {
+      "roboflow": {
+        "n_images": 587,
+        "n_positive": 571,
+        "n_negative_no_ball": 16,
+        "n_balls": 573,
+        "negative_share": 0.0273,
+        "ball_area_px2": {
+          "median": 120.0,
+          "share_tiny_lt150": 0.637,
+          "share_small_lt400": 0.9913
+        },
+        "share_blurred": 0.0035,
+        "share_low_contrast": 0.9721
+      },
+      "soccernet_gsr": {
+        "n_images": 567,
+        "n_positive": 537,
+        "n_negative_no_ball": 30,
+        "n_balls": 537,
+        "negative_share": 0.0529,
+        "ball_area_px2": {
+          "median": 221.0,
+          "share_tiny_lt150": 0.27,
+          "share_small_lt400": 0.8231
+        },
+        "share_blurred": 0.0093,
+        "share_low_contrast": 0.7616
+      }
+    }
+  },
+  "gsr_occlusion": {
+    "n_frames_with_ball_and_players": 8436,
+    "ball_inside_a_player_box": 2997,
+    "ball_within_10px_of_a_player_box": 3810,
+    "occlusion_rate": 0.3553,
+    "body_adjacent_rate": 0.4516,
+    "note": "player boxes are reconstructed from the stored centre and height, so this is an approximation of the annotated box"
+  },
+  "local_broadcast": {
+    "n_reviewed": 115,
+    "n_positive": 115,
+    "n_negative": 0,
+    "n_shots": 26,
+    "ball_area_px2": {
+      "median": 289.0,
+      "p10": 121.0,
+      "p90": 3600.0,
+      "share_tiny_lt150": 0.2609
+    }
+  },
+  "thresholds": {
+    "tiny_area_px2": 150.0,
+    "small_area_px2": 400.0,
+    "blur_variance_cut": 40.0,
+    "contrast_cut": 0.15
+  }
+}

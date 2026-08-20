@@ -1,0 +1,80 @@
+# Maximum accuracy - correctness over speed.
+#
+# Higher inference resolution, lower confidence floors (recall-first, with the
+# temporal stages rejecting false positives), a tiled ball sweep on every frame
+# while the ball is lost, longer track buffers, and stricter calibration gating.
+# Substantially slower than balanced mode; use it for evaluation runs and for
+# any clip whose output will be quoted.
+
+runtime:
+  half_precision: false   # fp32: avoids fp16 underflow on very small ball logits
+  batch_size: 8
+
+ingestion:
+  frame_stride: 1
+
+detection:
+  # Deliberately NOT raised above 1280. The checkpoint was fine-tuned at 1280,
+  # and measured on the validation clips, inference at 1920 lost referee
+  # detections entirely - the apparent object scale stops matching training.
+  # Test-time augmentation is the accuracy lever that actually works here.
+  imgsz: 1280
+  augment: true
+  conf_threshold: 0.15
+  max_detections: 80
+  class_conf_overrides:
+    ball: 0.05
+    goalkeeper: 0.20
+    referee: 0.20
+
+ball_detection:
+  enabled: true
+  # Phase 2E: 960 -> 1280 so this mode is not coarser than balanced. 1280 is the
+  # measured optimum; 1536 trades recall for false positives.
+  imgsz: 1280
+  conf_threshold: 0.05
+  roi_size_px: 768
+  tiled_fallback: true
+  tile_rows: 3
+  tile_cols: 4
+  tile_overlap: 0.25
+  tiled_every_n_frames: 1
+
+tracking:
+  tracker: botsort
+  track_buffer: 90
+  reid_enabled: true
+  reid_weight: 0.5
+  gmc_enabled: true
+  gmc_method: sparseOptFlow
+  gmc_downscale: 1
+  min_track_length: 3
+  stitch_max_gap_frames: 45
+
+ball_tracking:
+  max_interpolation_gap_frames: 15
+  smoothing_window: 7
+  max_hypotheses: 6
+
+team_classification:
+  # Still colour: the learned embedding did not win at broadcast crop sizes even
+  # with a larger sample. Revisit for tactical-camera footage with bigger crops.
+  method: color
+  fit_sample_size: 1200
+  fit_stride_frames: 3
+  min_votes: 5
+
+calibration:
+  imgsz: 1280
+  # Lower keypoint floor than balanced mode: broadcast frames often expose only
+  # 4-9 landmarks, so accepting weaker ones buys calibration coverage. The
+  # geometric validation and reprojection gate below are what keep it honest.
+  keypoint_conf_threshold: 0.25
+  min_keypoints: 5
+  max_reprojection_error_m: 2.0
+  min_confidence: 0.5
+  smoothing_window: 11
+  calibrate_every_n_frames: 1
+
+reid:
+  crops_per_track: 40

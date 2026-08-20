@@ -1,0 +1,50 @@
+# Showcase overlay - the presentation output.
+#
+# Layered on configs/default.yaml via `extends`. Analysis settings are identical
+# to the balanced mode that produced the run being rendered; only the
+# visualization block differs, so a showcase render can never change the geometry
+# it draws.
+#
+# The `extends` key is load-bearing, not decoration. `config_path` replaces the
+# default file rather than overriding it, so without this line every analysis
+# setting here falls back to its field default -- which silently resolved
+# calibration imgsz to 1280 instead of the validated 960, and selected a ball
+# checkpoint other than the promoted one.
+extends: default.yaml
+
+visualization:
+  # The showcase video replaces the debug outputs, it does not accompany them.
+  write_annotated_video: false
+  write_tactical_map: false
+  write_combined_video: false
+
+  showcase:
+    enabled: true
+    in_place: true
+
+    dot_radius_px: 3
+    dot_outline_px: 1
+    team_colors:
+      A: [255, 0, 200]
+      B: [10, 60, 255]
+
+    # Below this many resolved players a frame is abstained on entirely.
+    min_team_players_per_frame: 2
+
+    # Officials: a third class, far from both team colours.
+    referee_color: [255, 176, 0]
+
+    graph_colors:
+      A: [8, 8, 8]
+      B: [30, 235, 40]
+    graph_thickness_px: 1
+    graph_opacity: 0.85
+    graph_knn: 3
+    graph_max_edge_m: 20.0
+    graph_local_scale: 2.2
+    graph_max_edge_image_frac: 0.30
+    graph_min_calibration_confidence: 0.3
+    graph_hysteresis_on_frames: 3
+    graph_hysteresis_off_frames: 8
+
+    graph_min_inliers: 1

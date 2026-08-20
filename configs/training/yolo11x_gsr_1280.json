@@ -1,0 +1,26 @@
+{
+  "schema": "VISIONPITCH_YOLO_TRAINING_V1",
+  "status": "PREPARED_NOT_STARTED",
+  "model": "models/yolo11x.pt",
+  "data": "data/yolo_gsr_detect/dataset.yaml",
+  "task": "detect",
+  "imgsz": 1280,
+  "epochs": 60,
+  "batch": 4,
+  "batch_selection": "batch 4 passed the bounded RTX 3090 Ti CUDA smoke test",
+  "device": 0,
+  "workers": 4,
+  "seed": 1234,
+  "deterministic": true,
+  "cuda_smoke": {
+    "status": "passed",
+    "train_images": 32,
+    "validation_images": 8,
+    "backward_steps": 8,
+    "peak_total_gpu_used_mib": 18308,
+    "peak_torch_reserved_mib": 15654,
+    "gpu_total_mib": 24564
+  },
+  "estimated_duration": "approximately 50-65 hours including full official VALID evaluation each epoch",
+  "full_training_started": false
+}

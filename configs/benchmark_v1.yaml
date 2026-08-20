@@ -1,0 +1,86 @@
+# VisionPitch benchmark definition, version 1.0.0
+#
+# Pins the footage and settings used for reported metrics so that a later model
+# change is compared against exactly the same input. Bump `version` whenever a
+# change makes previously reported numbers incomparable.
+#
+# Sequence ids are filled in from SN-GSR-2025 `valid` once the download
+# completes and each clip has been reviewed against its scenario label. They
+# are left empty rather than guessed, because a benchmark that silently
+# mislabels its scenarios is worse than none.
+
+version: "1.0.0"
+dataset:
+  name: SoccerNet-GSR
+  release: SN-GSR-2025
+  split: valid
+  source: https://huggingface.co/datasets/SoccerNet/SN-GSR-2025
+  licence: GPL-3.0
+
+evaluation:
+  quality_mode: quality
+  iou_threshold: 0.5
+  ball_tolerance_px: 25.0
+  detection_score_threshold: 0.25
+
+# Scenarios the benchmark must cover, and why each is hard. `sequences` lists
+# SNGS ids assigned to that scenario.
+scenarios:
+  wide_broadcast:
+    description: Wide main-camera view; players under ~10 px wide
+    stresses: [small_object_detection, association]
+    sequences: []
+  close_up:
+    description: Tight framing; few pitch landmarks visible
+    stresses: [calibration_underconstrained]
+    sequences: []
+  fast_pan:
+    description: Rapid camera pan following play
+    stresses: [camera_motion_compensation, association]
+    sequences: []
+  zoom:
+    description: Camera zoom changing apparent scale
+    stresses: [box_scale_stability, calibration]
+    sequences: []
+  crowded_penalty_box:
+    description: Many players in a small area, heavy occlusion
+    stresses: [id_switches, reid]
+    sequences: []
+  midfield_congestion:
+    description: Similar-appearance players interacting
+    stresses: [reid, team_classification]
+    sequences: []
+  ball_in_air:
+    description: Lofted ball
+    stresses: [ball_detection, ball_projection_bias]
+    sequences: []
+  ball_occluded:
+    description: Ball hidden behind players
+    stresses: [ball_gap_handling, refusal_to_fabricate]
+    sequences: []
+  player_overlap:
+    description: Players crossing and merging
+    stresses: [id_switches, appearance_contamination]
+    sequences: []
+  near_touchline:
+    description: Players on or over the touchline
+    stresses: [off_pitch_projection_margin]
+    sequences: []
+  goalkeeper:
+    description: Goalkeeper visible in play
+    stresses: [third_kit_colour, goalkeeper_team_assignment]
+    sequences: []
+  referee_crossing:
+    description: Referee moving through players
+    stresses: [role_classification, association]
+    sequences: []
+
+# Metrics reported per scenario and in aggregate. Anything not computable is
+# reported as {"status": "not_measured", "reason": ...}, never as zero.
+report:
+  detection: [precision, recall, mAP50, mAP50-95, per_size.small.recall]
+  tracking: [HOTA, DetA, AssA, IDF1, MOTA, IDSW, Frag]
+  teams: [accuracy_on_decided, coverage, balanced_accuracy]
+  ball: [observed_recall, observed_precision, effective_recall, temporal_continuity]
+  calibration: [availability, median_pitch_error_m, accuracy_at_1m, accuracy_at_3m]
+  performance: [mean_processing_fps, peak_vram_gb]

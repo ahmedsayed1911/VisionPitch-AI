@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pitch: #1b7a3e;
+  --pitch-dark: #14622f;
+}
+
+@layer base {
+  html,
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+  }
+  h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+  h2 {
+    @apply text-lg font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg
+           shadow-black/20 backdrop-blur;
+  }
+  .stat {
+    @apply text-2xl font-semibold tabular-nums tracking-tight;
+  }
+  .label {
+    @apply text-xs uppercase tracking-wider text-slate-400;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
+           transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-emerald-500 text-slate-950 hover:bg-emerald-400;
+  }
+  .btn-ghost {
+    @apply btn border border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800;
+  }
+  .btn-danger {
+    @apply btn border border-rose-800/60 text-rose-300 hover:bg-rose-950/50;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm
+           text-slate-100 placeholder-slate-500 outline-none focus:border-emerald-500;
+  }
+  .tab {
+    @apply whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors;
+  }
+  .tab-active {
+    @apply border-emerald-400 text-emerald-300;
+  }
+  .tab-idle {
+    @apply border-transparent text-slate-400 hover:text-slate-200;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium;
+  }
+}
+
+/* Scrollbars: the timeline and player list are long, and the default light
+   scrollbar is jarring against a dark dashboard. */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

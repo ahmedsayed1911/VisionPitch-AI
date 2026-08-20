@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a capability or a measurement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can't you do today, and what are you trying to achieve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How would it be measured
+      description: >
+        This project does not accept accuracy claims without a held-out,
+        clip-disjoint measurement. If the proposal affects model behaviour,
+        say which corpus and which metric would demonstrate it.

@@ -1,0 +1,89 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # CPU wheels only. The pyproject pins a CUDA index for local GPU work;
+      # CI has no GPU and does not need one, because every test that touches a
+      # checkpoint or decodes video is marked and skipped here.
+      - name: Install (CPU torch)
+        run: |
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --no-sources -e ".[dev]"
+
+      - name: Ruff
+        run: uv run ruff check src tests scripts
+
+      - name: Import smoke test
+        run: |
+          uv run python -c "
+          import importlib, pkgutil, visionpitch
+          bad = []
+          for m in pkgutil.walk_packages(visionpitch.__path__, 'visionpitch.'):
+              try:
+                  importlib.import_module(m.name)
+              except Exception as exc:
+                  bad.append((m.name, type(exc).__name__, str(exc)))
+          assert not bad, bad
+          print('all modules import')
+          "
+
+      - name: Config resolution
+        run: |
+          uv run python -c "
+          from visionpitch.common.config import load_config
+          for mode in ('fast_preview', 'balanced', 'max_accuracy'):
+              cfg = load_config(mode=mode)
+              print(mode, cfg.detection.model_path, cfg.ball_detection.imgsz)
+          "
+
+      # No model weights and no datasets are committed, so the suite must pass
+      # without them. Tests that need either are marked and deselected here.
+      - name: Tests
+        run: uv run pytest -q -m "not slow and not gpu and not needs_models and not needs_clip"
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run build

@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0.0",
+  "built_by": "scripts/build_ball_gsrtrain_dataset.py",
+  "gsr_root": "data\\SoccerNetGS\\train",
+  "gsr_split": "canonical train only",
+  "leakage_guard": {
+    "validation_sequences_used": 0,
+    "test_sequences_used": 0,
+    "challenge_sequences_used": 0,
+    "evaluation_sequences_used": 0,
+    "asserted_against": "data\\eval\\gsr\\sequences_info.json"
+  },
+  "gsr_train_sequences": [
+    "SNGS-061",
+    "SNGS-062",
+    "SNGS-063",
+    "SNGS-064",
+    "SNGS-066",
+    "SNGS-067",
+    "SNGS-068",
+    "SNGS-069",
+    "SNGS-070",
+    "SNGS-071",
+    "SNGS-072",
+    "SNGS-073",
+    "SNGS-074",
+    "SNGS-075",
+    "SNGS-076",
+    "SNGS-077",
+    "SNGS-097",
+    "SNGS-098",
+    "SNGS-099",
+    "SNGS-100",
+    "SNGS-101",
+    "SNGS-102",
+    "SNGS-103",
+    "SNGS-104",
+    "SNGS-105",
+    "SNGS-106",
+    "SNGS-107",
+    "SNGS-108",
+    "SNGS-111",
+    "SNGS-112",
+    "SNGS-113",
+    "SNGS-114",
+    "SNGS-151",
+    "SNGS-152",
+    "SNGS-153",
+    "SNGS-155",
+    "SNGS-156",
+    "SNGS-158",
+    "SNGS-159",
+    "SNGS-160",
+    "SNGS-162",
+    "SNGS-163",
+    "SNGS-165",
+    "SNGS-166",
+    "SNGS-167",
+    "SNGS-168",
+    "SNGS-169",
+    "SNGS-170"
+  ],
+  "gsr_val_sequences": [
+    "SNGS-060",
+    "SNGS-065",
+    "SNGS-109",
+    "SNGS-110",
+    "SNGS-115",
+    "SNGS-154",
+    "SNGS-157",
+    "SNGS-161",
+    "SNGS-164"
+  ],
+  "gsr_stride": 4,
+  "max_domain_share": 0.8,
+  "seed": 17,
+  "counts": {
+    "train": {
+      "gsr_train": 6804,
+      "roboflow": 1367,
+      "local": 78
+    },
+    "val": {
+      "gsr_train": 1611,
+      "roboflow": 242,
+      "local": 14
+    }
+  },
+  "reused_from": {
+    "roboflow": [
+      "data\\ball_multicorpus"
+    ],
+    "local": [
+      "data\\ball_broadcast_adapt"
+    ]
+  },
+  "why": "every existing ball checkpoint was fine-tuned on SN-GSR test-split frames; this dataset uses the train split only so a model built on it keeps the test split available for honest held-out evaluation"
+}

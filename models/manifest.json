@@ -1,0 +1,62 @@
+[
+  {
+    "key": "multiclass",
+    "repo_id": "martinjolif/yolo-football-player-detection",
+    "filename": "yolo-football-player-detection.pt",
+    "purpose": "player / goalkeeper / referee / ball detection",
+    "architecture": "YOLO11m",
+    "license": "AGPL-3.0",
+    "reported_metrics": {
+      "player": {
+        "mAP50": 0.9937,
+        "mAP50_95": 0.8737
+      },
+      "goalkeeper": {
+        "mAP50": 0.9413,
+        "mAP50_95": 0.8024
+      },
+      "referee": {
+        "mAP50": 0.9888,
+        "mAP50_95": 0.7741
+      },
+      "ball": {
+        "mAP50": 0.6799,
+        "mAP50_95": 0.338
+      }
+    },
+    "path": "models/yolo-football-player-detection.pt",
+    "sha256": "69c652bfa9814ef882c439617f04b8fd5749b6b8455aaa3c36110bc2e802aadd",
+    "size_bytes": 40583084
+  },
+  {
+    "key": "ball",
+    "repo_id": "martinjolif/yolo-football-ball-detection",
+    "filename": "yolo-football-ball-detection.pt",
+    "purpose": "dedicated high-resolution ball detection",
+    "architecture": "YOLO11n",
+    "license": "AGPL-3.0",
+    "reported_metrics": {
+      "ball": {
+        "precision": 0.8879,
+        "recall": 0.8,
+        "mAP50": 0.891,
+        "mAP50_95": 0.551
+      }
+    },
+    "path": "models/yolo-football-ball-detection.pt",
+    "sha256": "fb37942448e7de08745e8aab148d0794f680a738ddd55e5f17abe9ab2d6313fb",
+    "size_bytes": 5535706
+  },
+  {
+    "key": "pitch",
+    "repo_id": "martinjolif/yolo-football-pitch-detection",
+    "filename": "yolo-football-pitch-detection.pt",
+    "purpose": "32-point pitch landmark regression for homography",
+    "architecture": "YOLOv8x-pose",
+    "license": "AGPL-3.0",
+    "reported_metrics": null,
+    "path": "models/yolo-football-pitch-detection.pt",
+    "sha256": "06623b51f77f51695cde731da146596e6df73c95a5b4776f6afe7094389ed209",
+    "size_bytes": 140147688
+  }
+]

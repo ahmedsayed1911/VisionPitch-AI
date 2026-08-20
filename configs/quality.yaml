@@ -1,0 +1,108 @@
+quality_mode: quality
+seed: 0
+video:
+  stride: 1
+  max_frames: null
+  start_frame: 0
+detection:
+  weights: models/yolo11x.pt
+  image_size: 1280
+  confidence: 0.15
+  iou: 0.7
+  max_detections: 120
+  device: cuda:0
+  half: true
+  batch_size: 8
+  augment: true
+  class_map:
+    player: player
+    goalkeeper: goalkeeper
+    referee: referee
+    ball: ball
+    person: player
+ball:
+  weights: null
+  tiled_inference: true
+  tile_size: 640
+  tile_overlap: 0.25
+  roi_search: true
+  roi_radius_px: 320.0
+  confidence: 0.1
+  min_confidence: 0.1
+  init_confidence: 0.35
+  max_speed_px: 180.0
+  speed_slack_per_frame: 45.0
+  max_prediction_frames: 4
+  max_interpolation_gap: 25
+  max_interpolation_speed_px: 200.0
+tracking:
+  high_threshold: 0.5
+  low_threshold: 0.1
+  new_track_threshold: 0.6
+  n_init: 3
+  max_age: 75
+  match_threshold: 0.8
+  low_match_threshold: 0.5
+  reid_match_threshold: 0.45
+  reid_min_similarity: 0.55
+  weight_iou: 0.55
+  weight_appearance: 0.3
+  weight_pitch: 0.15
+  appearance_gate: 0.45
+  pitch_gate_m: 6.0
+  team_veto_confidence: 0.7
+  camera_motion: true
+  gmc_downscale: 2
+reid:
+  enabled: true
+  encoder: colour
+  model_name: vit_small_patch14_dinov2.lvd142m
+  device: cuda:0
+  half: true
+  batch_size: 128
+  input_size: 98
+  gallery_capacity: 12
+  min_crop_height: 42.0
+  min_crop_confidence: 0.55
+teams:
+  enabled: true
+  warmup_frames: 120
+  fit_sample_size: 600
+  min_fit_samples: 40
+  min_separation_ratio: 1.15
+  min_cluster_balance: 0.18
+  min_assignment_margin: 0.08
+  vote_decay: 0.98
+  vote_min_confidence: 0.6
+  vote_min_margin: 0.15
+  seed: 0
+calibration:
+  enabled: true
+  weights: models/yolo11x-pose.pt
+  image_size: 1280
+  device: cuda:0
+  half: true
+  keypoint_confidence: 0.5
+  ransac_threshold: 8.0
+  min_spread: 0.06
+  smoothing: true
+  smoothing_alpha: 0.35
+  motion_gate_px: 90.0
+  max_gap_frames: 12
+  pitch_length: 105.0
+  pitch_width: 68.0
+  off_pitch_margin_m: 8.0
+visualisation:
+  enabled: true
+  show_minimap: true
+  minimap_scale: 0.26
+  minimap_opacity: 0.88
+  show_track_ids: true
+  show_trails: true
+  trail_length: 25
+  show_boxes: false
+  marker: ellipse
+  show_diagnostics: true
+  show_uncertain: true
+  output_fps: null
+  output_codec: mp4v

@@ -1,0 +1,76 @@
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Frontend dependencies and generated bundles
+node_modules/
+web/node_modules/
+web/.next/
+web/out/
+
+# Datasets and annotations (including generated manifests inside data/)
+data/
+
+# Model weights and exported runtimes, at any nesting depth
+*.pt
+*.pth
+*.onnx
+*.engine
+*.safetensors
+*.torchscript
+models/finetune/
+
+# Videos, archives, and raw media
+*.mp4
+*.webm
+*.mov
+*.avi
+*.mkv
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Training/evaluation runs and generated reports
+runs/
+outputs/
+outputs_*/
+wandb/
+mlruns/
+
+# Recovery and backup material
+_phase*_recovery*/
+recovery/
+backups/
+*.bak
+*.tmp
+
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials*.json
+
+# Python packaging / editable-install metadata
+*.egg-info/
+build/
+dist/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Keep example environment templates (they contain no secrets)
+!.env.example
+!*.env.example
+!.env.local.example

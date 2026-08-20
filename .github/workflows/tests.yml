@@ -22,6 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The ingestion layer shells out to ffmpeg/ffprobe; without it the
+      # video-decoding tests error rather than skip.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:

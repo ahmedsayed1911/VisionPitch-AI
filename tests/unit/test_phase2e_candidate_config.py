@@ -123,8 +123,15 @@ def test_rollback_configs_are_preserved():
     assert previous["ball_detection"]["imgsz"] == 640
 
 
+@pytest.mark.needs_models
 def test_both_checkpoints_exist_on_disk():
-    """The winner must be loadable and the previous one must not be deleted."""
+    """The winner must be loadable and the previous one must not be deleted.
+
+    Weights are not committed, so this can only be checked where they have been
+    downloaded or trained. The *config* half of the same contract — that the
+    rollback files exist and still name the previous checkpoint — is asserted
+    unconditionally by ``test_rollback_configs_are_preserved``.
+    """
     assert Path(WINNING_CHECKPOINT).is_file()
     assert Path(PREVIOUS_CHECKPOINT).is_file(), (
         "the superseded ball checkpoint must be kept for rollback"
